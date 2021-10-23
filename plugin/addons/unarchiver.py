@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 
+from __future__ import print_function
 from Screens.MessageBox import MessageBox
 from Components.Label import Label
 from Screens.Screen import Screen
 from Components.ActionMap import ActionMap
 from Components.MenuList import MenuList
-from Components.Sources.StaticText import StaticText
 from Tools.BoundFunction import boundFunction
 from Components.MultiContent import MultiContentEntryText, MultiContentEntryProgress
 from enigma import eConsoleAppContainer, eListboxPythonMultiContent, gFont, RT_HALIGN_LEFT, RT_HALIGN_CENTER, RT_VALIGN_CENTER
 import subprocess
-import skin
-
-# for locale (gettext)
-from . import _
 
 pname = _("File Commander - generalised archive handler")
 pdesc = _("unpack archives")
@@ -27,10 +23,10 @@ class ArchiverMenuScreen(Screen):
 			<widget name="list_left_head" position="10,10" size="1180,60" font="Regular;20" foregroundColor="#00fff000"/>
 			<widget name="list_left" position="10,85" size="570,470" scrollbarMode="showOnDemand"/>
 			<widget name="unpacking" position="10,250" size="570,30" scrollbarMode="showOnDemand" foregroundColor="#00ffffff"/>
-			<widget source="key_red" render="Label" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_green" render="Label" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
-			<widget source="key_yellow" render="Label" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_blue" render="Label" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_red" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
+			<widget name="key_yellow" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_blue" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
 			<ePixmap position="70,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_red.png" transparent="1" alphatest="on"/>
 			<ePixmap position="365,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_green.png" transparent="1" alphatest="on"/>
 			<ePixmap position="660,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_yellow.png" transparent="1" alphatest="on"/>
@@ -49,7 +45,7 @@ class ArchiverMenuScreen(Screen):
 		Screen.__init__(self, session)
 		self.filename = self.SOURCELIST.getFilename()
 		self.sourceDir = self.SOURCELIST.getCurrentDirectory()
-		self.targetDir = self.TARGETLIST.getCurrentDirectory() or '/tmp/'
+		self.targetDir = self.TARGETLIST.getCurrentDirectory()
 		self.list = []
 
 		self.commands = {}
@@ -57,23 +53,22 @@ class ArchiverMenuScreen(Screen):
 		self.errlog = ""
 
 		self.chooseMenuList = MenuList([], enableWrapAround=True, content=eListboxPythonMultiContent)
-		font = skin.fonts.get("FileList", ("Regular", 20, 25))
-		self.chooseMenuList.l.setFont(0, gFont(font[0], font[1]))
-		self.chooseMenuList.l.setItemHeight(font[2])
+		self.chooseMenuList.l.setFont(0, gFont('Regular', 20))
+		self.chooseMenuList.l.setItemHeight(25)
 		self['list_left'] = self.chooseMenuList
 
 		self.chooseMenuList2 = MenuList([], enableWrapAround=True, content=eListboxPythonMultiContent)
-		self.chooseMenuList2.l.setFont(0, gFont(font[0], font[1]))
-		self.chooseMenuList2.l.setItemHeight(font[2])
+		self.chooseMenuList2.l.setFont(0, gFont('Regular', 25))
+		self.chooseMenuList2.l.setItemHeight(30)
 		self['unpacking'] = self.chooseMenuList2
 		self['unpacking'].selectionEnabled(0)
 
 		self["list_left_head"] = Label("%s%s" % (self.sourceDir, self.filename))
 
-		self["key_red"] = StaticText(_("Cancel"))
-		self["key_green"] = StaticText(_("OK"))
-		self["key_yellow"] = StaticText("")
-		self["key_blue"] = StaticText("")
+		self["key_red"] = Label(_("Cancel"))
+		self["key_green"] = Label(_("OK"))
+		self["key_yellow"] = Label("")
+		self["key_blue"] = Label("")
 
 		self["setupActions"] = ActionMap(["SetupActions"], {
 			"cancel": self.cancel,
@@ -88,32 +83,27 @@ class ArchiverMenuScreen(Screen):
 		self.chooseMenuList.setList(map(self.ListEntry, self.list))
 
 	def ListEntry(self, entry):
-		x, y, w, h = skin.parameters.get("FcFileListName", (10, 0, 1180, 25))
-		x = 10
-		w = self['list_left'].l.getItemSize().width()
 		return [
 			entry,
-			MultiContentEntryText(pos=(x, y), size=(w - x, h), font=0, flags=RT_HALIGN_LEFT, text=entry[0])
+			MultiContentEntryText(pos=(10, 0), size=(1180, 25), font=0, flags=RT_HALIGN_LEFT | RT_VALIGN_CENTER, text=entry[0])
 		]
 
 	def UnpackListEntry(self, entry):
 		# print "[ArchiverMenuScreen] UnpackListEntry", entry
 		currentProgress = int(float(100) / float(int(100)) * int(entry))
 		progpercent = str(currentProgress) + "%"
-		x, y, w, h = skin.parameters.get("FcFileListMultiName", (60, 0, 1180, 25))
-		x2 = x
-		x = 10
-		w = self['list_left'].l.getItemSize().width()
+		# color2 = 0x00ffffff  # White
+		textColor = 0x00808080  # Grey
 		return [
 			entry,
-			MultiContentEntryProgress(pos=(x + x2, y + int(h / 3)), size=(w - (x + x2), int(h / 3)), percent=int(currentProgress), borderWidth=1),
-			MultiContentEntryText(pos=(x, y), size=(x2, h), font=0, flags=RT_HALIGN_LEFT, text=str(progpercent))
+			MultiContentEntryProgress(pos=(10, 0), size=(560, 30), percent=int(currentProgress)),
+			MultiContentEntryText(pos=(10, 3), size=(560, 30), font=0, flags=RT_HALIGN_CENTER | RT_VALIGN_CENTER, text=str(progpercent), color=textColor)
 		]
 
 	def ok(self):
 		selectName = self['list_left'].getCurrent()[0][0]
 		self.selectId = self['list_left'].getCurrent()[0][1]
-		print "[ArchiverMenuScreen] Select:", selectName, self.selectId
+		print("[ArchiverMenuScreen] Select:", selectName, self.selectId)
 		self.unpackModus(self.selectId)
 
 	def unpackModus(self, id):
@@ -133,15 +123,15 @@ class ArchiverMenuScreen(Screen):
 		# of the command. It must have an API compatible
 		# with ArchiverInfoScreen.
 
-		print "[ArchiverMenuScreen] unpackPopen", cmd
+		print("[ArchiverMenuScreen] unpackPopen", cmd)
 		try:
 			shellcmd = type(cmd) not in (tuple, list)
 			p = subprocess.Popen(cmd, shell=shellcmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		except OSError as ex:
 			cmdname = cmd.split()[0] if shellcmd else cmd[0]
 			msg = _("Can not run %s: %s.\n%s may be in a plugin that is not installed.") % (cmdname, ex.strerror, cmdname)
-			print "[ArchiverMenuScreen]", msg
-			self.session.open(MessageBox, msg, MessageBox.TYPE_ERROR, simple=True)
+			print("[ArchiverMenuScreen]", msg)
+			self.session.open(MessageBox, msg, MessageBox.TYPE_ERROR)
 			return
 		output = map(str.splitlines, p.communicate())
 		if output[0] and output[1]:
@@ -166,7 +156,7 @@ class ArchiverMenuScreen(Screen):
 		# progress indicator using the command output
 		# (see unrar.py)
 
-		print "[ArchiverMenuScreen] unpackEConsoleApp", cmd
+		print("[ArchiverMenuScreen] unpackEConsoleApp", cmd)
 		self.errlog = ""
 		self.container = eConsoleAppContainer()
 		self.container.appClosed.append(boundFunction(self.extractDone, self.filename))
@@ -181,7 +171,7 @@ class ArchiverMenuScreen(Screen):
 			self.container.execute(cmd)
 
 	def extractDone(self, filename, data):
-		print "[ArchiverMenuScreen] extractDone", data
+		print("[ArchiverMenuScreen] extractDone", data)
 		if data:
 			type = MessageBox.TYPE_ERROR
 			timeout = 15
@@ -197,7 +187,7 @@ class ArchiverMenuScreen(Screen):
 			type = MessageBox.TYPE_INFO
 			timeout = 8
 			message = _("%s successfully extracted.") % filename
-		self.session.open(MessageBox, message, type, timeout=timeout, simple=True)
+		self.session.open(MessageBox, message, type, timeout=timeout)
 
 	def logerrs(self, data):
 		self.errlog += data
@@ -211,10 +201,10 @@ class ArchiverInfoScreen(Screen):
 		<screen position="40,80" size="1200,600" title="" >
 			<widget name="list_left_head" position="10,10" size="1180,60" font="Regular;20" foregroundColor="#00fff000"/>
 			<widget name="list_left" position="10,85" size="1180,470" scrollbarMode="showOnDemand"/>
-			<widget source="key_red" render="Label" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_green" render="Label" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
-			<widget source="key_yellow" render="Label" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_blue" render="Label" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_red" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
+			<widget name="key_yellow" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_blue" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
 			<ePixmap position="70,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_red.png" transparent="1" alphatest="on"/>
 			<ePixmap position="365,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_green.png" transparent="1" alphatest="on"/>
 			<ePixmap position="660,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_yellow.png" transparent="1" alphatest="on"/>
@@ -234,17 +224,16 @@ class ArchiverInfoScreen(Screen):
 		Screen.__init__(self, session)
 
 		self.chooseMenuList = MenuList([], enableWrapAround=True, content=eListboxPythonMultiContent)
-		font = skin.fonts.get("FileList", ("Regular", 20, 25))
-		self.chooseMenuList.l.setFont(0, gFont(font[0], font[1]))
-		self.chooseMenuList.l.setItemHeight(font[2])
+		self.chooseMenuList.l.setFont(0, gFont('Regular', 20))
+		self.chooseMenuList.l.setItemHeight(25)
 		self['list_left'] = self.chooseMenuList
 
 		self["list_left_head"] = Label("%s%s" % (self.sourceDir, self.filename))
 
-		self["key_red"] = StaticText(_("Cancel"))
-		self["key_green"] = StaticText(_("OK"))
-		self["key_yellow"] = StaticText("")
-		self["key_blue"] = StaticText("")
+		self["key_red"] = Label(_("Cancel"))
+		self["key_green"] = Label(_("OK"))
+		self["key_yellow"] = Label("")
+		self["key_blue"] = Label("")
 
 		self["setupActions"] = ActionMap(["SetupActions"], {
 			"cancel": self.cancel,
@@ -260,16 +249,9 @@ class ArchiverInfoScreen(Screen):
 			self.chooseMenuList.setList(map(self.ListEntry, self.list))
 
 	def ListEntry(self, entry):
-		x, y, w, h = skin.parameters.get("FcFileListName", (10, 0, 1180, 25))
-		x = 10
-		w = self['list_left'].l.getItemSize().width()
-		flags = RT_HALIGN_LEFT
-		if 'Plugins.Extensions.FileCommander.addons.unzip.UnpackInfoScreen' in `self`:
-			flags = RT_HALIGN_LEFT | RT_VALIGN_CENTER
-			y *= 2
 		return [
 			entry,
-			MultiContentEntryText(pos=(x, int(y)), size=(w - x, h), font=0, flags=flags, text=entry[0])
+			MultiContentEntryText(pos=(10, 0), size=(1180, 25), font=0, flags=RT_HALIGN_LEFT | RT_VALIGN_CENTER, text=entry[0])
 		]
 
 	def cancel(self):

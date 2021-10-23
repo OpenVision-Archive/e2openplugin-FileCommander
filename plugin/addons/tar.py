@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 
+from __future__ import print_function
 from Components.config import config
 from Plugins.Extensions.FileCommander.addons.unarchiver import ArchiverMenuScreen, ArchiverInfoScreen
 
-# for locale (gettext)
-from . import _
-
-pname = _("File Commander - tar Addon")
+pname = _("File Commander - tar/compressed tar Addon")
 pdesc = _("unpack tar/compressed tar Files")
 pversion = "0.2-r1"
 
@@ -16,7 +14,7 @@ class TarMenuScreen(ArchiverMenuScreen):
 
 	def __init__(self, session, sourcelist, targetlist):
 		super(TarMenuScreen, self).__init__(session, sourcelist, targetlist)
-		self.skinName = "ArchiverMenuScreen"
+
 		self.list.append((_("Show contents of tar or compressed tar file"), 1))
 		self.list.append((_("Unpack to current folder"), 2))
 		self.list.append((_("Unpack to %s") % self.targetDir, 3))
@@ -27,7 +25,7 @@ class TarMenuScreen(ArchiverMenuScreen):
 		self.pversion = pversion
 
 	def unpackModus(self, id):
-		print "[TarMenuScreen] unpackModus", id
+		print("[TarMenuScreen] unpackModus", id)
 		if id == 1:
 			cmd = ("tar", "-tf", self.sourceDir + self.filename)
 			self.unpackPopen(cmd, UnpackInfoScreen)
@@ -46,7 +44,6 @@ class UnpackInfoScreen(ArchiverInfoScreen):
 
 	def __init__(self, session, list, sourceDir, filename):
 		super(UnpackInfoScreen, self).__init__(session, list, sourceDir, filename)
-		self.skinName = "ArchiverInfoScreen"
 		self.pname = pname
 		self.pdesc = pdesc
 		self.pversion = pversion

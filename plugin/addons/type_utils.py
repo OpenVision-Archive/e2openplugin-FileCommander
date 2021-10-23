@@ -2,6 +2,7 @@
 # -*- coding: iso-8859-1 -*-
 
 # Components
+from __future__ import print_function
 from Components.config import config
 from Components.Label import Label
 from Components.ActionMap import HelpableActionMap
@@ -21,16 +22,9 @@ from Tools.Directories import fileExists
 
 # Various
 from Plugins.Extensions.FileCommander.InputBox import InputBoxWide
-from enigma import eTimer, ePicLoad, getDesktop, gFont, eSize
-
-from Tools.TextBoundary import getTextBoundarySize
-
-import skin
+from enigma import eTimer, ePicLoad, getDesktop
 
 import os
-
-# for locale (gettext)
-from . import _
 
 ##################################
 
@@ -49,18 +43,17 @@ class MoviePlayer(Movie_Audio_Player):
 
 	def leavePlayer(self):
 		self.is_closing = True
-		self.session.openWithCallback(self.leavePlayerConfirmed, MessageBox, _("Exit movie player?"))
+		self.close()
 
 	def leavePlayerConfirmed(self, answer):
-		if answer:
-			self.close()
+		pass
 
 	def doEofInternal(self, playing):
 		if not self.execing:
 			return
 		if not playing:
 			return
-		self.close()
+		self.leavePlayer()
 
 	def showMovies(self):
 		self.WithoutStopClose = True
@@ -82,17 +75,14 @@ class vEditor(Screen, HelpableScreen):
 		<screen position="40,80" size="1200,600" title="">
 			<widget name="list_head" position="10,10" size="1170,45" font="Regular;20" foregroundColor="#00fff000"/>
 			<widget name="filedata"  scrollbarMode="showOnDemand" position="10,60" size="1160,500" itemHeight="25"/>
-			<widget source="key_red" render="Label" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_green" render="Label" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
-			<widget source="key_yellow" render="Label" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget source="key_blue" render="Label" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_red" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
+			<widget name="key_yellow" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
+			<widget name="key_blue" position="985,570" size="260,25" transparent="1" font="Regular;20"/>
 			<ePixmap position="70,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_red.png" transparent="1" alphatest="on"/>
 			<ePixmap position="365,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_green.png" transparent="1" alphatest="on"/>
 			<ePixmap position="660,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_yellow.png" transparent="1" alphatest="on"/>
 			<ePixmap position="955,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/FileCommander/pic/button_blue.png" transparent="1" alphatest="on"/>
-			### do not remove this line. Set x-size and font same as is set "input" in InputBoxWide screen ###
-			<widget name="InputBoxWide_input" position="0,0" size="1080,0" font="Regular;22"/>
-			###
 		</screen>"""
 
 	def __init__(self, session, file):
@@ -104,32 +94,24 @@ class vEditor(Screen, HelpableScreen):
 		self.file_name = file
 		self.list = []
 		self["filedata"] = MenuList(self.list)
-		self["actions"] = HelpableActionMap(self, ["WizardActions", "ColorActions", "InfobarChannelSelection"], {
+		self["actions"] = HelpableActionMap(self, ["WizardActions", "ColorActions", "DirectionActions"], {
 			"ok": (self.editLine, _("Edit current line")),
 			"green": (self.editLine, _("Edit current line")),
 			"back": (self.exitEditor, _("Exit editor and write changes (if any)")),
 			"red": (self.exitEditor, _("Exit editor and write changes (if any)")),
 			"yellow": (self.del_Line, _("Delete current line")),
 			"blue": (self.ins_Line, _("Insert line before current line")),
-			"keyChannelUp": (self.posStart, _("Go to start of file")),
-			"keyChannelDown": (self.posEnd, _("Go to end of file")),
+			"chplus": (self.posStart, _("Go to start of file")),
+			"chminus": (self.posEnd, _("Go to end of file")),
 		}, -1)
 		self["list_head"] = Label(self.file_name)
-		self["key_red"] = StaticText(_("Exit"))
-		self["key_green"] = StaticText(_("Edit"))
-		self["key_yellow"] = StaticText(_("Delete"))
-		self["key_blue"] = StaticText(_("Insert"))
-
-		# do not remove label "InputBoxWide_input".
-		# it is used for get true length (in chars) for InputBoxWide
-		# because InputBoxWide is opened later
-		self["InputBoxWide_input"] = Label()
-		#
-
+		self["key_red"] = Label(_("Exit"))
+		self["key_green"] = Label(_("Edit"))
+		self["key_yellow"] = Label(_("Delete"))
+		self["key_blue"] = Label(_("Insert"))
 		self.selLine = None
 		self.oldLine = None
 		self.isChanged = False
-		self.skinName = "vEditorScreen"
 		self.GetFileData(file)
 		self.setTitle(pname)
 
@@ -139,7 +121,7 @@ class vEditor(Screen, HelpableScreen):
 			warningtext = warningtext + "\n\n" + (_("WARNING!"))
 			warningtext = warningtext + "\n" + (_("The authors are NOT RESPONSIBLE"))
 			warningtext = warningtext + "\n" + (_("for DATA LOSS OR DAMAGE !!!"))
-			msg = self.session.openWithCallback(self.SaveFile, MessageBox, _(self.file_name + warningtext), MessageBox.TYPE_YESNO)
+			msg = self.session.openWithCallback(self.SaveFile, MessageBox, _(self.file_name + self.file_name + warningtext), MessageBox.TYPE_YESNO)
 			msg.setTitle(_("File Commander"))
 		else:
 			self.close()
@@ -169,44 +151,11 @@ class vEditor(Screen, HelpableScreen):
 			self.findtab = editableText.find("\t", 0, len(editableText))
 			if self.findtab != -1:
 				editableText = editableText.replace("\t", "        ")
-
-			firstpos_end = config.plugins.filecommander.editposition_lineend.value
-
-			# count position for InputBoxWide
-			def getMaxPosition(text, label, end=False):
-				try:
-					def getStringSize(string, label):
-						label.instance.setNoWrap(1)
-						label.setText("%s" % string)
-						return label.instance.calculateSize().width()
-
-					w = label.instance.size().width()
-					if w <= 0:
-						return 100 # default value
-					sw = getStringSize(text, label)
-
-					if sw > w:
-						if end: # editation from end
-							l = len(text)
-							for i, idx in enumerate(text):
-								x = text[l - i:]
-								print x
-								if getStringSize(x, label) >= w:
-									return i
-							return i
-						else:	# standard editation
-							for i, idx in enumerate(text):
-								x = text[:i]
-								if getStringSize(x, label) >= w:
-									return i
-							return i
-					return w / getStringSize("0", label) # approximate number of characters in label
-				except:
-					return 100 # default value, if missing label "InputBoxWide_input" in vEditor skin
-
-			length = getMaxPosition(editableText, self["InputBoxWide_input"], end=firstpos_end) - 1
-
-			self.session.openWithCallback(self.callbackEditLine, InputBoxWide, title="%s %s" % (_("Original:"), editableText), visible_width=length, overwrite=False, firstpos_end=firstpos_end, allmarked=False, windowTitle=_("Edit line ") + str(self.selLine + 1), text=editableText)
+			# InputBoxWide's initialiser decodes editableText as UTF-8, but if
+			# it fails MessageBox will also fail.  Catch a decode error before
+			# opening the screen.
+			editableText.decode("utf-8")
+			self.session.openWithCallback(self.callbackEditLine, InputBoxWide, title=_(_("original") + ": " + editableText), overwrite=False, firstpos_end=True, allmarked=False, windowTitle=_("Edit line ") + str(self.selLine + 1), text=editableText)
 		except:
 			msg = self.session.open(MessageBox, _("This line is not editable!"), MessageBox.TYPE_ERROR)
 			msg.setTitle(_("Error..."))
@@ -286,8 +235,8 @@ class ImageViewer(Screen, HelpableScreen):
 		<screen position="0,0" size="%d,%d" flags="wfNoBorder">
 			<eLabel position="0,0" zPosition="0" size="%d,%d" backgroundColor="#00000000" />
 			<widget name="image" position="%d,%d" size="%d,%d" zPosition="1" alphatest="on" />
-			<widget name="status" position="%d,%d" size="20,20" zPosition="2" pixmap="icons/record.png" alphatest="on" />
-			<widget name="icon" position="%d,%d" size="20,20" zPosition="2" pixmap="icons/ico_mp_play.png"  alphatest="on" />
+			<widget name="status" position="%d,%d" size="20,20" zPosition="2" pixmap="skin_default/icons/record.png" alphatest="on" />
+			<widget name="icon" position="%d,%d" size="20,20" zPosition="2" pixmap="skin_default/icons/ico_mp_play.png"  alphatest="on" />
 			<widget source="message" render="Label" position="%d,%d" size="%d,25" font="Regular;20" halign="left" foregroundColor="#0038FF48" zPosition="2" noWrap="1" transparent="1" />
 		</screen>
 		""" % (w, h, w, h, s, s, w - (s * 2), h - (s * 2), s + 5, s + 2, s + 25, s + 2, s + 45, s, w - (s * 2) - 50)
@@ -298,8 +247,8 @@ class ImageViewer(Screen, HelpableScreen):
 
 		self["actions"] = HelpableActionMap(self, ["OkCancelActions", "ColorActions", "DirectionActions"], {
 			"cancel": (self.keyCancel, _("Exit picture viewer")),
-			"left": (self.keyLeft, _("Show previous picture")),
-			"right": (self.keyRight, _("Show next picture")),
+			"left": (self.keyLeft, _("Show next picture")),
+			"right": (self.keyRight, _("Show previous picture")),
 			"blue": (self.keyBlue, _("Start/stop slide show")),
 			"yellow": (self.keyYellow, _("Show image information")),
 		}, -1)
@@ -426,7 +375,6 @@ class ImageViewer(Screen, HelpableScreen):
 		if self.displayNow and len(self.currentImage):
 			self.displayNow = False
 			self["message"].setText(self.currentImage[0])
-			self.setTitle(self.currentImage[0])
 			self.lsatIndex = self.currentImage[1]
 			self["image"].instance.setPixmap(self.currentImage[2].__deref__())
 			self.currentImage = []
@@ -460,7 +408,7 @@ class ImageViewer(Screen, HelpableScreen):
 		self["status"].show()
 
 	def cbSlideShow(self):
-		print "slide to next Picture index=" + str(self.lsatIndex)
+		print("slide to next Picture index=" + str(self.lsatIndex))
 		if not config.pic.loop.value and self.lsatIndex == self.fileListLen:
 			self.PlayPause()
 		self.displayNow = True
